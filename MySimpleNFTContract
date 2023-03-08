@@ -1,0 +1,145 @@
+// Programmer: Aishah Manam
+// Project: My Simple NFT Tutorial
+// Website: https://github.com/Aishah-Manam/MySmartContracts/MySimpleNFTContract
+// SPDX-License-Identifier: GPL3+
+pragma solidity ^0.7.6;
+
+contract control {
+    address internal owner;
+
+    modifier onlyOwner {
+        require (msg.sender == owner);
+        _;
+    }
+}
+contract info is control{
+    string contractName;
+    
+    function whoAmI () public view returns(address Address){
+        return msg.sender;
+    }
+
+    function setContractName(string memory _contractName) public onlyOwner {
+        contractName = _contractName;
+    }
+
+    function getContractName() public view returns (string memory ContractName){
+         return contractName;
+    }
+}
+
+contract identity is control {    
+
+    mapping(address=> string) internal name;
+    mapping(address=> int8) internal age;
+    mapping(address=> int128) internal wallet;
+
+    //Get address of owner
+    function getOwner() public view returns (address Owner){
+        return owner;
+    }
+
+    function setMyIdentity(string memory _name, int8 _age) public {
+        name[msg.sender] = _name;
+        age[msg.sender] = _age;
+    }
+
+    function setIdentity(address _address, string memory _name, int8 _age) public {
+        name[_address] = _name;
+        age[_address] = _age;
+    }
+
+    //Get My Identity
+    function getMyIdentity() public view returns (string memory _Name, int8 _Age, int128 _Wallet) {
+        return (name[msg.sender], age[msg.sender], wallet[msg.sender]);
+    }
+
+    //Get Identity with Address
+    function getIdentity(address _address) public view returns (string memory Name, int8 Age, int128 Wallet) {
+        return (name[_address], age[_address], wallet[_address]);
+    }
+
+    //Get my wallet
+    function getMyWallet() public view returns (int128 Wallet) {
+        return (wallet[msg.sender]);
+    }
+}
+
+contract trade is identity, info {
+    int128 public decimal;
+    int128 public total_supply;
+    struct asset {
+        string name;
+        int32 quantity;
+        int64 price;
+    }
+    constructor () {
+        owner = msg.sender;
+        decimal = 2;
+        // total_supply = 100000*10^decimal
+        total_supply = 100000;
+
+        //Initialize product value
+        //Quantity 10pc, RM100.00/pc
+        addProduct("My NFT Collection", 10, 1000);
+
+        //Set User Idnetity for testing
+        setIdentity(0x78731D3Ca6b7E34aC0F824c42a7cC18A495cabaB,"Ali",25);
+        setIdentity(0x617F2E2fD72FD9D5503197092aC168c91465E7f2,"Abu",28);
+
+        //Initialize token value
+        //For Ali = RM25.00
+        giveToken(0x78731D3Ca6b7E34aC0F824c42a7cC18A495cabaB, 2500); 
+        //For Abu= RM40.00
+        giveToken(0x617F2E2fD72FD9D5503197092aC168c91465E7f2, 4200);
+
+    }
+
+    //mapping(address=>asset) internal product;
+    asset internal product;
+
+    function addProduct(string memory _name, int32 _quantity, int64 _price) public onlyOwner{
+        product.name = _name;
+        product.quantity = _quantity;
+        product.price = _price;        
+    }
+
+    function readProductInfo() public view returns(string memory Name, int32 Quantity, int64 Price){
+        return(product.name, product.quantity, product.price);
+    }
+
+    function giveToken(address _address, int128 _amount) public onlyOwner {
+        if(_amount <= total_supply){
+            wallet[_address] = wallet[_address] + _amount;
+            //recommended to use safe math/library instead
+            //recommend to also check user validity
+            total_supply = total_supply - _amount;
+        } else {
+            revert("Invalid Deposit Account");
+        }
+    }
+
+    function transfer(address _to, int128 _amount) public {
+        if(_amount <= wallet[msg.sender]) {
+            wallet[_to] = wallet[_to] + _amount;
+            wallet[msg.sender] = wallet[msg.sender] - _amount;
+        } else {
+            revert ("Invalid Transfer Amount");
+        }
+    }
+
+    function pay(int32 _quantity) public {
+        if(wallet[msg.sender] >= product.price * _quantity){
+
+            if ( _quantity <= product.quantity ){
+                transfer(owner, product.price * _quantity); //do transfer
+                product.quantity = product.quantity - _quantity; //deduct quantity
+            }else{ 
+                revert ("Not enough product stock");
+            }
+
+        } else {
+            revert ("Not enough token in your wallet");
+        }
+    }
+}
